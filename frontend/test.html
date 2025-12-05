@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Add Product</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 500px;
+      margin: 50px auto;
+    }
+    input, textarea, button {
+      width: 100%;
+      padding: 10px;
+      margin: 5px 0;
+      box-sizing: border-box;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .message {
+      margin-bottom: 15px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h2>Add New Product</h2>
+  <div class="message" id="message"></div>
+  <form id="productForm">
+    <input type="text" name="name" placeholder="Product Name" required />
+    <input type="number" name="category_id" placeholder="Category ID" />
+    <input type="number" name="price" placeholder="Price" required />
+    <input type="number" step="0.01" name="weight" placeholder="Weight" />
+    <textarea name="description" placeholder="Description"></textarea>
+    <input type="text" name="image_url" placeholder="Image URL" />
+    <button type="submit">Add Product</button>
+  </form>
+
+  <script>
+    const form = document.getElementById('productForm');
+    const messageDiv = document.getElementById('message');
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+      const product = Object.fromEntries(formData.entries());
+
+      try {
+        const response = await fetch('https://backendtesting-5-vfir.onrender.com/products', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(product)
+        });
+
+        const data = await response.json();
+
+        if (response.ok) {
+          messageDiv.textContent = 'Product added successfully!';
+          form.reset();
+        } else {
+          messageDiv.textContent = 'Error: ' + JSON.stringify(data.error);
+        }
+      } catch (err) {
+        messageDiv.textContent = 'Error: ' + err.message;
+      }
+    });
+  </script>
+
+</body>
+</html>
