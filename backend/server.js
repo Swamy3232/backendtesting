@@ -5,19 +5,27 @@ import { supabase } from "./supabaseClient.js";
 
 const app = express();
 
-// Enable CORS for all origins
+// Enable CORS
 app.use(cors());
+
+// Enable JSON parsing
 app.use(express.json());
+
+// Enable file uploads
 app.use(fileUpload());
 
 // GET all products
 app.get("/products", async (req, res) => {
-  const { data, error } = await supabase.from("products").select("*");
-  if (error) return res.status(400).json({ error: error.message });
-  res.json(data);
+  try {
+    const { data, error } = await supabase.from("products").select("*");
+    if (error) return res.status(400).json({ error: error.message });
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
-// POST new product with optional image
+// POST new product
 app.post("/products", async (req, res) => {
   try {
     console.log("REQ BODY:", req.body);
@@ -34,24 +42,26 @@ app.post("/products", async (req, res) => {
       const file = req.files.image;
       const fileName = Date.now() + "_" + file.name;
 
-      const { data, error } = await supabase.storage
+      const { data: storageData, error: storageError } = await supabase.storage
         .from("product-image")
         .upload(fileName, file.data, { upsert: true });
 
-      if (error) return res.status(400).json({ error: error.message });
+      if (storageError) return res.status(400).json({ error: storageError.message });
 
       image_url = `https://pyxujweejwvyphjmxaag.supabase.co/storage/v1/object/public/product-image/${fileName}`;
     }
 
-    // Prepare product object with correct types
+    // Prepare product object
     const product = {
-      name,
+      name: name?.trim(),
       category_id: category_id ? parseInt(category_id) : null,
       price: parseFloat(price),
       weight: weight ? parseFloat(weight) : 0,
-      description: description || "",
+      description: description?.trim() || "",
       image_url
     };
+
+    console.log("Prepared product object:", product);
 
     // Insert into Supabase
     const { data, error } = await supabase.from("products").insert([product]);
@@ -64,4 +74,5 @@ app.post("/products", async (req, res) => {
 });
 
 // Start server
-app.listen(3000, () => console.log("API running on port 3000"));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`API running on port ${PORT}`));
