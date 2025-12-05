@@ -1,42 +1,37 @@
 import express from "express";
 import fileUpload from "express-fileupload";
-import cors from "cors"; // <-- import cors
+import cors from "cors";
 import { supabase } from "./supabaseClient.js";
 
 const app = express();
 
 // Enable CORS for all origins
 app.use(cors());
-
 app.use(express.json());
 app.use(fileUpload());
 
-// Your routes
+// GET all products
 app.get("/products", async (req, res) => {
   const { data, error } = await supabase.from("products").select("*");
-  if (error) return res.status(400).json({ error });
+  if (error) return res.status(400).json({ error: error.message });
   res.json(data);
 });
 
+// POST new product with optional image
 app.post("/products", async (req, res) => {
   try {
     console.log("REQ BODY:", req.body);
     console.log("REQ FILES:", req.files);
 
-    // Extract fields from the form
     const { name, category_id, price, weight, description } = req.body;
 
     // Validate required fields
-    if (!name || !price) {
-      return res.status(400).json({ error: "Name and price are required" });
-    }
+    if (!name || !price) return res.status(400).json({ error: "Name and price are required" });
 
     // Handle image upload
     let image_url = null;
     if (req.files && req.files.image) {
       const file = req.files.image;
-
-      // Optional: prepend timestamp to file name to avoid conflicts
       const fileName = Date.now() + "_" + file.name;
 
       const { data, error } = await supabase.storage
@@ -60,7 +55,6 @@ app.post("/products", async (req, res) => {
 
     // Insert into Supabase
     const { data, error } = await supabase.from("products").insert([product]);
-
     if (error) return res.status(400).json({ error: error.message });
 
     res.json({ success: true, data });
