@@ -1,7 +1,7 @@
 import express from "express";
 import fileUpload from "express-fileupload";
 import cors from "cors";
-import { supabase } from "./supabaseClient.js";
+import { createClient } from "@supabase/supabase-js";
 
 const app = express();
 
@@ -14,10 +14,19 @@ app.use(express.json());
 // Enable file uploads
 app.use(fileUpload());
 
+// -------------------
+// Supabase Client
+// -------------------
+const supabaseUrl = "https://pyxujweejwvyphjmxaag.supabase.co";
+const supabaseSecretKey = "sb_secret_Jqm1U"; // ⚠️ Service key, do NOT expose to frontend
+const supabase = createClient(supabaseUrl, supabaseSecretKey);
+
+// -------------------
 // GET all products
+// -------------------
 app.get("/products", async (req, res) => {
   try {
-    const { data, error } = await supabase.from("products").select("*");
+    const { data, error } = await supabase.from("products").select("*").order('id', { ascending: false });
     if (error) return res.status(400).json({ error: error.message });
     res.json(data);
   } catch (err) {
@@ -25,7 +34,9 @@ app.get("/products", async (req, res) => {
   }
 });
 
+// -------------------
 // POST new product
+// -------------------
 app.post("/products", async (req, res) => {
   try {
     console.log("REQ BODY:", req.body);
@@ -33,8 +44,9 @@ app.post("/products", async (req, res) => {
 
     const { name, category_id, price, weight, description } = req.body;
 
-    // Validate required fields
-    if (!name || !price) return res.status(400).json({ error: "Name and price are required" });
+    if (!name || !price) {
+      return res.status(400).json({ error: "Name and price are required" });
+    }
 
     // Handle image upload
     let image_url = null;
@@ -42,7 +54,7 @@ app.post("/products", async (req, res) => {
       const file = req.files.image;
       const fileName = Date.now() + "_" + file.name;
 
-      const { data: storageData, error: storageError } = await supabase.storage
+      const { error: storageError } = await supabase.storage
         .from("product-image")
         .upload(fileName, file.data, { upsert: true });
 
@@ -53,11 +65,11 @@ app.post("/products", async (req, res) => {
 
     // Prepare product object
     const product = {
-      name: name?.trim(),
+      name: name.trim(),
       category_id: category_id ? parseInt(category_id) : null,
       price: parseFloat(price),
       weight: weight ? parseFloat(weight) : 0,
-      description: description?.trim() || "",
+      description: description ? description.trim() : "",
       image_url
     };
 
@@ -73,6 +85,8 @@ app.post("/products", async (req, res) => {
   }
 });
 
+// -------------------
 // Start server
+// -------------------
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`API running on port ${PORT}`));
